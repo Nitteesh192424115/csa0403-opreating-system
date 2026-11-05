@@ -1,0 +1,48 @@
+define _POSIX_C_SOURCE 200809L
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
+int main(int argc, char **argv)
+{
+    int n = argc > 1 ? atoi(argv[1]) : 3;
+    pid_t kids[2100];
+    printf("parent pid = %d\n", getpid());
+    for (int i = 0; i < n; i++) {
+        pid_t pid = fork();
+        if (pid == 0) { sleep(3); _exit(0); }
+        kids[i] = pid;
+        printf("created child %d with pid %d\n", i + 1, pid);
+    }
+    fflush(stdout);
+    if (n <= 5) {
+        char cmd[100];
+        snprintf(cmd, sizeof cmd, "ps -o pid,ppid,stat,vsz,rss,cmd --ppid %d", getpid());
+        sleep(1);
+        system(cmd);
+        snprintf(cmd, sizeof cmd, "grep -E 'Name|State|Pid|PPid|VmRSS|voluntary' /proc/%d/status", kids[0]);
+        system(cmd);
+    }
+    for (int i = 0; i < n; i++) waitpid(kids[i], NULL, 0);
+    printf("all %d children finished\n", n);
+    return 0;
+}
+
+
+output
+parent pid = 121
+created child 1 with pid 122
+created child 2 with pid 123
+created child 3 with pid 124
+  PID  PPID STAT    VSZ   RSS CMD
+  122   121 S      2688   280 ./q1 3
+  123   121 S      2688   280 ./q1 3
+  124   121 S      2688   280 ./q1 3
+Name:   q1
+State:  S (sleeping)
+Pid:    122
+PPid:   121
+VmRSS:       280 kB
+voluntary_ctxt_switches:   1
+nonvoluntary_ctxt_switches: 0
+all 3 children finished
