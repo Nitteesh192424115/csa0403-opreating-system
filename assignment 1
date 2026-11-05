@@ -1,0 +1,35 @@
+define _POSIX_C_SOURCE 200809L
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
+ 
+int main(void)
+{
+    int status;
+    pid_t pid;
+    printf("shell: running job 1\n");
+    fflush(stdout);
+    pid = fork();
+    if (pid == 0) {
+        execlp("expr", "expr", "6", "*", "7", (char *)NULL);
+        exit(127);
+    }
+    waitpid(pid, &status, 0);
+    printf("job 1 exit status %d\n", WEXITSTATUS(status));
+ 
+    printf("shell: running job 2\n");
+    fflush(stdout);
+    pid = fork();
+    if (pid == 0) _exit(3);
+    waitpid(pid, &status, 0);
+    printf("job 2 exit status %d\n", WEXITSTATUS(status));
+    return 0;
+}
+Compile and run: gcc -std=c11 -Wall -Wextra t7.c -o t7 && ./t7
+Output obtained (same as the expected output):
+shell: running job 1
+42
+job 1 exit status 0
+shell: running job 2
+job 2 exit status 3
